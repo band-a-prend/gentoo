@@ -2,7 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI="6"
-MY_EXTRAS_VER="20180228-1611Z"
+MY_EXTRAS_VER="20180308-1938Z"
 SUBSLOT="18"
 
 JAVA_PKG_OPT_USE="jdbc"
@@ -44,13 +44,17 @@ REQUIRED_USE="jdbc? ( extraengine server !static )
 	static? ( yassl !pam )"
 
 # REMEMBER: also update eclass/mysql*.eclass before committing!
-KEYWORDS="~amd64 ~x86"
+KEYWORDS="~amd64 ~arm ~hppa ~ia64 ~ppc64 ~sparc ~x86"
 
 # Shorten the path because the socket path length must be shorter than 107 chars
 # and we will run a mysql server during test phase
 S="${WORKDIR}/mysql"
 
 if [[ "${MY_EXTRAS_VER}" == "live" ]] ; then
+	inherit git-r3
+	EGIT_REPO_URI="https://anongit.gentoo.org/git/proj/mysql-extras.git"
+	EGIT_CHECKOUT_DIR="${WORKDIR}/mysql-extras"
+	EGIT_CLONE_TYPE=shallow
 	MY_PATCH_DIR="${WORKDIR}/mysql-extras"
 else
 	MY_PATCH_DIR="${WORKDIR}/mysql-extras-${MY_EXTRAS_VER}"
@@ -266,6 +270,10 @@ src_prepare() {
 	# There is no CMake flag, it simply checks for existance
 	rm -r "${S}"/storage/mroonga/vendor/groonga || die "could not remove packaged groonga"
 
+	if ! use server; then
+		rm -r "${S}"/plugin/handler_socket || die
+	fi
+
 	cmake-utils_src_prepare
 }
 
@@ -280,7 +288,11 @@ src_configure(){
 	# bug #283926, with GCC4.4, this is required to get correct behavior.
 	append-flags -fno-strict-aliasing
 
-	multilib-minimal_src_configure
+	if use client-libs ; then
+		multilib-minimal_src_configure
+	else
+		multilib_src_configure
+	fi
 }
 
 multilib_src_configure() {
@@ -482,14 +494,14 @@ multilib_src_configure() {
 }
 
 src_compile() {
-	multilib-minimal_src_compile
+	if use client-libs ; then
+		multilib-minimal_src_compile
+	else
+		multilib_src_compile
+	fi
 }
 
 multilib_src_compile() {
-	if ! multilib_is_native_abi && ! use client-libs ; then
-		return
-	fi
-
 	cmake-utils_src_compile
 }
 
@@ -509,21 +521,17 @@ src_install() {
 
 		# wrap the config scripts
 		MULTILIB_CHOST_TOOLS=( /usr/bin/mariadb_config /usr/bin/mysql_config )
+		multilib-minimal_src_install
+	else
+		multilib_src_install
+		multilib_src_install_all
 	fi
-	multilib-minimal_src_install
 }
 
 # Intentionally override eclass function
 multilib_src_install() {
-	if ! multilib_is_native_abi && ! use client-libs ; then
-		return
-	fi
 
 	cmake-utils_src_install
-
-	if ! use client-libs ; then
-		return
-	fi
 
 	# Make sure the vars are correctly initialized
 	mysql_init_vars
@@ -538,10 +546,12 @@ multilib_src_install() {
 		doins "${S}"/sql/*.h
 	fi
 
+	if use client-libs ; then
 	# Install compatible symlinks to libmysqlclient
 #	use static-libs && dosym libmariadbclient.a "${EPREFIX}/usr/$(get_libdir)/libmysqlclient.a"
 #	dosym libmariadb.so.3 "${EPREFIX}/usr/$(get_libdir)/libmysqlclient.so"
 	dosym libmariadb.so.3 "${EPREFIX}/usr/$(get_libdir)/libmysqlclient.so.${SUBSLOT}"
+	fi
 
 	# Kill old libmysqclient_r symlinks if they exist.  Time to fix what depends on them.
 	find "${D}" -name 'libmysqlclient_r.*' -type l -delete || die
@@ -622,12 +632,7 @@ multilib_src_install_all() {
 # FEATURES='test userpriv -usersandbox' \
 # ebuild mariadb-X.X.XX.ebuild \
 # digest clean package
-multilib_src_test() {
-
-	if ! multilib_is_native_abi ; then
-		einfo "Server tests not available on non-native abi".
-		return 0;
-	fi
+src_test() {
 
 	_disable_test() {
 		local rawtestname reason
@@ -691,6 +696,12 @@ multilib_src_test() {
 		main.mysql_client_test_comp rpl.rpl_extra_col_master_myisam ; do
 			_disable_test  "$t" "False positives in Gentoo"
 	done
+
+	if ! use client-libs ; then
+		_disable_test main.plugin_auth "Needs client libraries built"
+	fi
+
+	_disable_test main.mysql "Bogus error text mismatch failure"
 
 	# run mysql-test tests
 	perl mysql-test-run.pl --force --vardir="${T}/var-tests" --reorder --skip-test=tokudb --skip-test-list="${T}/disabled.def"
@@ -842,11 +853,11 @@ pkg_config() {
 
 		unset tmp_mysqld_password_source
 	fi
-	MYSQL_TMPDIR="$(_getoptval '--mysqld' tmpdir)"
+	MYSQL_TMPDIR="$(_getoptval mysqld tmpdir)"
 	# These are dir+prefix
-	MYSQL_RELAY_LOG="$(_getoptval '--mysqld' relay-log)"
+	MYSQL_RELAY_LOG="$(_getoptval mysqld relay-log)"
 	MYSQL_RELAY_LOG=${MYSQL_RELAY_LOG%/*}
-	MYSQL_LOG_BIN="$(_getoptval '--mysqld' log-bin)"
+	MYSQL_LOG_BIN="$(_getoptval mysqld log-bin)"
 	MYSQL_LOG_BIN=${MYSQL_LOG_BIN%/*}
 
 	if [[ ! -d "${ROOT}/$MYSQL_TMPDIR" ]]; then

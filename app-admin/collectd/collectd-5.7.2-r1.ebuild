@@ -15,7 +15,7 @@ SRC_URI="${HOMEPAGE%/}/files/${P}.tar.bz2"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="amd64 arm x86"
+KEYWORDS="alpha amd64 arm x86"
 IUSE="contrib debug java kernel_Darwin kernel_FreeBSD kernel_linux perl selinux static-libs udev xfs"
 
 # The plugin lists have to follow here since they extend IUSE
@@ -158,6 +158,7 @@ PATCHES=(
 	"${FILESDIR}"/${PN}-5.6.0-gentoo.patch
 	"${FILESDIR}"/${PN}-5.7.2-issue-2443.patch
 	"${FILESDIR}"/${PN}-5.7.2-CVE-2017-16820.patch
+	"${FILESDIR}"/${PN}-5.7.2-varnish-5.2+.patch
 )
 
 # @FUNCTION: collectd_plugin_kernel_linux

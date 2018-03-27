@@ -14,7 +14,6 @@ if [[ ${PV} == *9999 ]];then
 	inherit git-r3
 	SRC_URI=""
 	EGIT_REPO_URI="${HOMEPAGE}"
-	KEYWORDS=""
 else
 	SRC_URI="${HOMEPAGE}/archive/v${PV}.tar.gz -> ${P}.tar.gz"
 	KEYWORDS="~x86 ~amd64"
@@ -44,6 +43,7 @@ DEPEND="
 	>=media-plugins/gst-plugins-ladspa-1.12.0:1.0
 	>=media-plugins/gst-plugins-lv2-1.12.0:1.0
 	>=media-plugins/gst-plugins-pulse-1.12.0:1.0
+	media-libs/rubberband
 "
 RDEPEND="${DEPEND}
 	media-sound/pulseaudio[equalizer]
