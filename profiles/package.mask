@@ -29,6 +29,11 @@
 
 #--- END OF EXAMPLES ---
 
+# Sergey Torokhov <torokhov_s_a@mail.ru> (30 March 2018)
+# Coordinated conversion to wxGTK:3.0-gtk3
+# Drop mask after migration of existing wxGTK:3.0 users
+=dev-util/codeblocks-17.12-r300
+
 # Lars Wendler <polynomial-c@gentoo.org> (27 Mar 2018)
 # Breaks a couple of revdeps. See tracker bug at
 # https://bugs.gentoo.org/651698
